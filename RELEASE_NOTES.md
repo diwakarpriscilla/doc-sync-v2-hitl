@@ -24,7 +24,7 @@ This release adds the initial structure and workflow documentation for the Autom
 
 - No Playwright dependency or test runner is currently configured.
 - No `resetDemo.js` exists in the repository.
-- The Confluence publisher updates existing pages only; it does not create missing pages.
+- The Confluence publisher supports updating existing pages and creating child pages beneath an approved parent.
 - Live Confluence reads/publishing have not been executed.
 - The README and workflow require review before production use.
 

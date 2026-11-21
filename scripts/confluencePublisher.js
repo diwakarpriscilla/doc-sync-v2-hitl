@@ -33,11 +33,23 @@ function required(value, name) {
 }
 
 function getConfig() {
+  let baseUrl = required(
+    process.env.CONFLUENCE_URL || process.env.CONFLUENCE_BASE_URL,
+    "CONFLUENCE_URL",
+  ).replace(/\/+$/, "");
+  try {
+    const url = new URL(baseUrl);
+    if (
+      url.hostname.endsWith(".atlassian.net") &&
+      !url.pathname.replace(/\/+$/, "").endsWith("/wiki")
+    ) {
+      baseUrl = `${baseUrl}/wiki`;
+    }
+  } catch {
+    throw new Error("CONFLUENCE_URL must be a valid absolute URL.");
+  }
   return {
-    baseUrl: required(
-      process.env.CONFLUENCE_URL || process.env.CONFLUENCE_BASE_URL,
-      "CONFLUENCE_URL",
-    ).replace(/\/+$/, ""),
+    baseUrl,
     email: required(process.env.CONFLUENCE_EMAIL, "CONFLUENCE_EMAIL"),
     token: required(
       process.env.CONFLUENCE_API_TOKEN || process.env.JIRA_SSO_PAT,
@@ -123,9 +135,68 @@ async function main() {
     return;
   }
 
+  if (command === "create") {
+    if (!args.includes("--approved")) {
+      throw new Error("Confluence writes require explicit approval and the --approved flag.");
+    }
+    const config = getConfig();
+    const title = required(option(args, "--title"), "--title");
+    const file = required(option(args, "--file"), "--file");
+    const parentId = required(
+      option(args, "--parent-id") || process.env.CONFLUENCE_STORY_PAGE_ID,
+      "CONFLUENCE_STORY_PAGE_ID or --parent-id",
+    );
+    const spaceKey = required(
+      process.env.CONFLUENCE_SPACE_KEY,
+      "CONFLUENCE_SPACE_KEY",
+    );
+    const content = fs.readFileSync(path.resolve(file), "utf8");
+    const url = new URL(`${config.baseUrl}/rest/api/content`);
+    let response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${config.email}:${config.token}`).toString("base64")}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          type: "page",
+          title,
+          ancestors: [{ id: parentId }],
+          space: { key: spaceKey },
+          body: {
+            storage: {
+              value: content,
+              representation: "storage",
+            },
+          },
+        }),
+      });
+    } catch {
+      throw new Error("Unable to reach Confluence; check the URL and network connection.");
+    }
+    if (!response.ok) {
+      throw new Error(`Confluence API returned HTTP ${response.status}.`);
+    }
+    const page = await response.json();
+    process.stdout.write(
+      `${JSON.stringify({
+        id: page.id,
+        title: page.title,
+        status: "created",
+        parent_id: parentId,
+        url: `${page._links?.base || config.baseUrl}${page._links?.webui || ""}`,
+      }, null, 2)}\n`,
+    );
+    return;
+  }
+
   throw new Error(
     "Usage: node scripts/confluencePublisher.js read [--page-id ID]\n" +
-      "   or: node scripts/confluencePublisher.js publish --page-id ID --title TITLE --file FILE --approved",
+      "   or: node scripts/confluencePublisher.js publish --page-id ID --title TITLE --file FILE --approved\n" +
+      "   or: node scripts/confluencePublisher.js create --title TITLE --file FILE --parent-id ID --approved",
   );
 }
 
