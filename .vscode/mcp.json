@@ -1,0 +1,21 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "atlassian-api-token",
+      "description": "Atlassian API token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "@aashari/mcp-server-atlassian-jira"],
+      "env": {
+        "ATLASSIAN_SITE_NAME": "https://diwakarpriscilla.atlassian.net",
+        "ATLASSIAN_USER_EMAIL": "diwakarpriscilla@gmail.com",
+        "ATLASSIAN_API_TOKEN": "${input:atlassian-api-token}"
+      }
+    }
+  }
+}
