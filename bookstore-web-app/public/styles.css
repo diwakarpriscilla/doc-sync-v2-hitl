@@ -1,0 +1,172 @@
+:root {
+  color-scheme: light;
+  --ink: #17211b;
+  --muted: #667069;
+  --paper: #f6f3eb;
+  --card: #fffdfa;
+  --accent: #d96b3d;
+  --line: #ddd7c9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  color: var(--ink);
+  font-size: 1.45rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.search input {
+  width: min(280px, 52vw);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: Arial, sans-serif;
+}
+
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 28px 72px;
+}
+
+.hero {
+  max-width: 720px;
+  margin-bottom: 56px;
+}
+
+.hero h1 {
+  margin: 8px 0 16px;
+  font-size: clamp(2.8rem, 7vw, 5.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.hero > p:last-child {
+  color: var(--muted);
+  font-family: Arial, sans-serif;
+  font-size: 1.1rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+#resultCount {
+  color: var(--muted);
+  font-family: Arial, sans-serif;
+  font-size: 0.85rem;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.book-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.book-cover {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  padding: 24px;
+  background: var(--cover, #c9d7c3);
+  color: var(--cover-text, #17211b);
+  text-align: center;
+}
+
+.book-cover strong {
+  max-width: 220px;
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
+.book-details {
+  padding: 18px;
+}
+
+.book-details h3 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.book-details p {
+  margin: 0;
+  color: var(--muted);
+  font-family: Arial, sans-serif;
+  font-size: 0.92rem;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 40px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (max-width: 760px) {
+  .book-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    margin-bottom: 38px;
+  }
+}

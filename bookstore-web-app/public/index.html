@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bookstore</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Bookstore home">Bookstore</a>
+      <label class="search">
+        <span class="sr-only">Search books</span>
+        <input id="searchInput" type="search" placeholder="Search title or author">
+      </label>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Curated reads</p>
+        <h1>Find your next favorite book.</h1>
+        <p>Browse our hand-picked collection of stories, ideas, and adventures.</p>
+      </section>
+
+      <section aria-labelledby="catalogHeading">
+        <div class="section-heading">
+          <h2 id="catalogHeading">Featured books</h2>
+          <p id="resultCount" aria-live="polite"></p>
+        </div>
+        <div id="bookGrid" class="book-grid"></div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
