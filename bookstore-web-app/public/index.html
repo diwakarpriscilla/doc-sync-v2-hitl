@@ -22,6 +22,29 @@
         <p>Browse our hand-picked collection of stories, ideas, and adventures.</p>
       </section>
 
+      <section class="add-book-section" aria-labelledby="addBookHeading">
+        <div>
+          <p class="eyebrow">Your shelf</p>
+          <h2 id="addBookHeading">Add a book</h2>
+        </div>
+        <form id="addBookForm" class="add-book-form">
+          <label>
+            <span>Title</span>
+            <input name="title" type="text" maxlength="120" required>
+          </label>
+          <label>
+            <span>Author</span>
+            <input name="author" type="text" maxlength="80" required>
+          </label>
+          <label>
+            <span>Category</span>
+            <input name="category" type="text" maxlength="80" required>
+          </label>
+          <button type="submit">Add book</button>
+        </form>
+        <p id="formMessage" class="form-message" aria-live="polite"></p>
+      </section>
+
       <section aria-labelledby="catalogHeading">
         <div class="section-heading">
           <h2 id="catalogHeading">Featured books</h2>

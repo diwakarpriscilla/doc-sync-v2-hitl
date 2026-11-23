@@ -72,6 +72,73 @@ main {
   font-size: 1.1rem;
 }
 
+.add-book-section {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.6fr) 2fr;
+  align-items: end;
+  gap: 20px 32px;
+  margin-bottom: 56px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.add-book-section h2 {
+  margin: 8px 0 0;
+  font-size: 1.5rem;
+}
+
+.add-book-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  font-family: Arial, sans-serif;
+}
+
+.add-book-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.add-book-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.add-book-form button {
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.add-book-form button:hover {
+  filter: brightness(0.94);
+}
+
+.form-message {
+  grid-column: 2;
+  min-height: 1em;
+  margin: 0;
+  color: var(--muted);
+  font-family: Arial, sans-serif;
+  font-size: 0.88rem;
+}
+
 .eyebrow {
   margin: 0;
   color: var(--accent);
@@ -164,6 +231,18 @@ main {
 @media (max-width: 760px) {
   .book-grid {
     grid-template-columns: 1fr;
+  }
+
+  .add-book-section {
+    grid-template-columns: 1fr;
+  }
+
+  .add-book-form {
+    grid-template-columns: 1fr;
+  }
+
+  .form-message {
+    grid-column: 1;
   }
 
   .hero {

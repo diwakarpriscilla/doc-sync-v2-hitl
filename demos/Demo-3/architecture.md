@@ -4,12 +4,16 @@
 
 ```mermaid
 flowchart LR
-  U["Backend Engineering Lead\nCLI user"]
+  U["Bookstore Storefront Manager\nCLI user"]
   CLI["Node.js Documentation Sync CLI\nTarget folder argument"]
   FS["Selected project folder\nFilesystem"]
   JS["JavaScript source files\n*.js"]
   DOC["Documentation files\nREADME.md and API_DOCS.md"]
   OUT["Console report"]
+  READER["Bookstore visitor"]
+  UI["Bookstore UI\nSearch and Add Book"]
+  API["Catalog API\nGET/POST /api/books"]
+  BOOKS[("data/books.json")]
 
   U -->|"folder path or no argument"| CLI
   CLI -->|"validate and enumerate"| FS
@@ -18,6 +22,10 @@ flowchart LR
   CLI -->|"redacted generated text"| DOC
   CLI -->|"scanned files and section updates"| OUT
   OUT -->|"human-visible report"| U
+  READER --> UI
+  UI -->|"search catalog"| API
+  UI -->|"submit book details"| API
+  API -->|"read and persist"| BOOKS
 ```
 
 ## Data-Flow Diagram
@@ -25,7 +33,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   subgraph UserBoundary["User boundary"]
-    A["Backend Engineering Lead"]
+    A["Bookstore Storefront Manager"]
   end
 
   subgraph CLIBoundary["Local CLI process"]
@@ -62,26 +70,34 @@ flowchart LR
 ## Design Decisions
 
 - **Default target:** When no folder argument is supplied, the CLI selects `./bookstore-web-app`; a supplied path replaces that default.
-- **Source selection:** Because the requirements identify `.js` files but leave nested-folder behavior open, the initial architecture treats direct `.js` files in the selected folder as the confirmed scope. Recursive scanning requires an explicit requirements change.
+- **Source selection:** Scan `.js` files recursively beneath the selected project folder, excluding `.git` and `node_modules`. The default project contains `server.js` and nested `public/app.js`; recursive scanning includes both.
 - **Extraction:** The CLI reads source text and derives exported functions, JSDoc comments, and route metadata for `GET`, `POST`, `PUT`, and `DELETE`. Exact JSDoc fields and route formatting remain open pending clarification and are therefore not invented here.
 - **Marker preservation:** Generated content replaces only text bounded by `<!-- DOC-SYNC-START -->` and `<!-- DOC-SYNC-END -->`. Bytes outside a valid pair are not changed.
 - **Missing documents:** Missing `README.md` or `API_DOCS.md` is created with a project-folder-based title and a valid marker pair, as required.
-- **Existing documents without markers:** An existing file is not overwritten when it has no valid marker pair. The CLI reports a warning and skips the generated section; appending behavior is deferred until the open repair question is resolved.
+- **Existing documents without markers:** Never overwrite human-authored content. Leave an existing file without exactly one ordered marker pair unchanged and report a warning; do not count it as updated. A missing file is created with a starter title and marker pair.
 - **Determinism:** Generated sections are derived in a stable order from unchanged source content so repeat runs produce the same result.
 - **Secret boundary:** Redaction occurs before generation, documentation writes, and console reporting. No original secret value is stored or emitted.
 
 ## Interfaces
 
 - **CLI input:** optional positional project-folder path; omitted value means `./bookstore-web-app`.
-- **Source interface:** local reads of `.js` files in the selected target folder.
+- **Source interface:** recursive local reads of `.js` files in the selected target folder, excluding `.git` and `node_modules`.
 - **Documentation interface:** local reads and writes to `README.md` and `API_DOCS.md` in the selected target folder.
 - **Marker contract:** both marker lines must exist and form a valid start/end pair before in-marker content is replaced.
 - **Report interface:** local console text lists processed files and documentation sections updated, skipped, or created.
 - **Representative redaction contract:** `DB_PASSWORD`, `JWT_SECRET`, and `API_TOKEN` values are represented as `[REDACTED]`.
+- **Target-folder outcomes:** A missing/non-directory target returns a clear error and nonzero exit. An existing target with no `.js` files returns a clear empty-scan report and zero exit; missing documentation files may still be initialized.
+
+## Bookstore Search and Add Book Extension
+
+- The existing browser search remains case-insensitive across title, author, and category.
+- The Add Book form accepts a title, author, and category and sends them to `POST /api/books`.
+- The local catalog API validates required fields and length limits, then persists valid books to `data/books.json`.
+- After a successful add, the UI refreshes the catalog while retaining the current search query. API validation errors are presented to the user.
 
 ## Failure Handling
 
-- Missing or empty target folders return a clear report and non-exceptional CLI completion.
+- Missing or empty target folders return a clear report without an unhandled exception. The process exit code for these conditions is not specified and must be decided before implementation.
 - Scan or generation errors stop document updates and return a clear error report.
 - Documentation writes use a completed generated result followed by a safe local replacement strategy so a failed write does not leave partially written documentation.
 - Read, parse, or filesystem failures identify the affected file or documentation section without exposing secret values.

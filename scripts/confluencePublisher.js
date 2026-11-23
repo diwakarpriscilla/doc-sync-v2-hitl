@@ -2,7 +2,11 @@
 "use strict";
 
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
+const { execFileSync } = require("node:child_process");
+
+const MERMAID_FENCE = /^```mermaid[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gm;
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -103,8 +107,18 @@ function inlineMarkdown(value) {
     .replace(/\*(.+?)\*/g, "<em>$1</em>");
 }
 
-function markdownToStorage(markdown) {
-  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+function markdownToStorage(markdown, diagramFilenames = []) {
+  let diagramIndex = 0;
+  const withDiagramMarkers = markdown.replace(MERMAID_FENCE, () => {
+    const marker = `__DOCSYNC_MERMAID_IMAGE_${diagramIndex}__`;
+    diagramIndex += 1;
+    return `\n\n${marker}\n\n`;
+  });
+  if (diagramIndex !== diagramFilenames.length) {
+    throw new Error("Every Mermaid diagram must be rendered before converting the page.");
+  }
+
+  const lines = withDiagramMarkers.replace(/\r\n/g, "\n").split("\n");
   const blocks = [];
   let paragraph = [];
   let listType = null;
@@ -124,6 +138,19 @@ function markdownToStorage(markdown) {
   };
 
   for (const line of lines) {
+    const diagram = line.match(/^__DOCSYNC_MERMAID_IMAGE_(\d+)__$/);
+    if (diagram) {
+      flushParagraph();
+      closeList();
+      const index = Number(diagram[1]);
+      const filename = diagramFilenames[index];
+      if (!filename) throw new Error(`Missing rendered Mermaid attachment for diagram ${index + 1}.`);
+      blocks.push(
+        `<ac:image ac:alt="Mermaid diagram ${index + 1}"><ri:attachment ri:filename="${escapeHtml(filename)}" /></ac:image>`,
+      );
+      continue;
+    }
+
     if (line.startsWith("```")) {
       flushParagraph();
       closeList();
@@ -179,24 +206,78 @@ function markdownToStorage(markdown) {
   return blocks.join("\n");
 }
 
+function mermaidCliPath() {
+  let packageDir;
+  try {
+    packageDir = path.resolve(path.dirname(require.resolve("@mermaid-js/mermaid-cli")), "..");
+  } catch {
+    throw new Error("Mermaid rendering requires @mermaid-js/mermaid-cli; run npm install.");
+  }
+  const packageJsonPath = path.join(packageDir, "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  const executable = typeof packageJson.bin === "string" ? packageJson.bin : packageJson.bin?.mmdc;
+  if (!executable) throw new Error("@mermaid-js/mermaid-cli does not expose the mmdc executable.");
+  return path.resolve(packageDir, executable);
+}
+
+function prepareContent(markdown) {
+  const diagrams = [];
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "doc-sync-mermaid-"));
+  const sources = [...markdown.matchAll(MERMAID_FENCE)];
+  try {
+    const cliPath = sources.length ? mermaidCliPath() : null;
+    sources.forEach((match, index) => {
+      const inputPath = path.join(tempDir, `diagram-${index + 1}.mmd`);
+      const outputPath = path.join(tempDir, `diagram-${index + 1}.svg`);
+      fs.writeFileSync(inputPath, match[1], "utf8");
+      try {
+        execFileSync(process.execPath, [cliPath, "-i", inputPath, "-o", outputPath], {
+          stdio: "pipe",
+          windowsHide: true,
+        });
+      } catch (error) {
+        const detail = error.stderr?.toString("utf8").trim() || error.message;
+        throw new Error(`Failed to render Mermaid diagram ${index + 1}: ${detail}`);
+      }
+      if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size === 0) {
+        throw new Error(`Mermaid CLI produced no SVG for diagram ${index + 1}.`);
+      }
+      diagrams.push({
+        filePath: outputPath,
+        filename: `mermaid-diagram-${index + 1}.svg`,
+      });
+    });
+
+    return {
+      storage: markdownToStorage(markdown, diagrams.map((diagram) => diagram.filename)),
+      diagrams,
+      cleanup: () => fs.rmSync(tempDir, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 async function errorResponse(response) {
   const body = await response.text();
   const detail = body || "(empty response body)";
   throw new Error(`Confluence API returned HTTP ${response.status}: ${detail}`);
 }
 
-async function api(config, method, pageId, payload) {
-  const url = new URL(
-    `${config.baseUrl}/rest/api/content/${encodeURIComponent(pageId)}?expand=body.storage,version`,
-  );
-  const headers = {
+async function request(config, method, endpoint, { payload, body, headers = {} } = {}) {
+  const url = new URL(`${config.baseUrl}/rest/api/${endpoint}`);
+  const requestHeaders = {
     Authorization: `Basic ${Buffer.from(`${config.email}:${config.token}`).toString("base64")}`,
     Accept: "application/json",
+    ...headers,
   };
-  const options = { method, headers };
+  const options = { method, headers: requestHeaders };
   if (payload !== undefined) {
-    headers["Content-Type"] = "application/json";
+    requestHeaders["Content-Type"] = "application/json";
     options.body = JSON.stringify(payload);
+  } else if (body !== undefined) {
+    options.body = body;
   }
 
   let response;
@@ -206,7 +287,44 @@ async function api(config, method, pageId, payload) {
     throw new Error("Unable to reach Confluence; check the URL and network connection.");
   }
   if (!response.ok) await errorResponse(response);
-  return { ...(await response.json()), _httpStatus: response.status };
+  const responseBody = await response.text();
+  return {
+    data: responseBody ? JSON.parse(responseBody) : {},
+    status: response.status,
+  };
+}
+
+async function api(config, method, pageId, payload) {
+  const result = await request(
+    config,
+    method,
+    `content/${encodeURIComponent(pageId)}?expand=body.storage,version`,
+    { payload },
+  );
+  return { ...result.data, _httpStatus: result.status };
+}
+
+async function uploadAttachment(config, pageId, diagram) {
+  const pagePath = `content/${encodeURIComponent(pageId)}/child/attachment`;
+  const existing = await request(
+    config,
+    "GET",
+    `${pagePath}?filename=${encodeURIComponent(diagram.filename)}`,
+  );
+  const attachment = existing.data.results?.find((item) => item.title === diagram.filename);
+  const endpoint = attachment
+    ? `${pagePath}/${encodeURIComponent(attachment.id)}/data`
+    : pagePath;
+  const form = new FormData();
+  form.append(
+    "file",
+    new Blob([fs.readFileSync(diagram.filePath)], { type: "image/svg+xml" }),
+    diagram.filename,
+  );
+  await request(config, "POST", endpoint, {
+    body: form,
+    headers: { "X-Atlassian-Token": "no-check" },
+  });
 }
 
 async function main() {
@@ -240,24 +358,30 @@ async function main() {
     const id = pageId(option(args, "--page-id"), "--page-id");
     const title = demoTitle(args, required(option(args, "--title"), "--title"));
     const file = required(option(args, "--file"), "--file");
-    const content = markdownToStorage(fs.readFileSync(path.resolve(file), "utf8"));
-    const current = await api(config, "GET", id);
-    const page = await api(config, "PUT", id, {
-      id,
-      type: "page",
-      title,
-      version: { number: current.version.number + 1 },
-      body: { storage: { value: content, representation: "storage" } },
-    });
-    process.stdout.write(
-      `${JSON.stringify({
-        id: page.id,
-        title: page.title,
-        version: page.version?.number,
-        url: `${page._links?.base || config.baseUrl}${page._links?.webui || ""}`,
-        status: "published",
-      }, null, 2)}\n`,
-    );
+    const prepared = prepareContent(fs.readFileSync(path.resolve(file), "utf8"));
+    try {
+      const current = await api(config, "GET", id);
+      for (const diagram of prepared.diagrams) await uploadAttachment(config, id, diagram);
+      const page = await api(config, "PUT", id, {
+        id,
+        type: "page",
+        title,
+        version: { number: current.version.number + 1 },
+        body: { storage: { value: prepared.storage, representation: "storage" } },
+      });
+      process.stdout.write(
+        `${JSON.stringify({
+          id: page.id,
+          title: page.title,
+          version: page.version?.number,
+          url: `${page._links?.base || config.baseUrl}${page._links?.webui || ""}`,
+          status: "published",
+          attached_diagrams: prepared.diagrams.map((diagram) => diagram.filename),
+        }, null, 2)}\n`,
+      );
+    } finally {
+      prepared.cleanup();
+    }
     return;
   }
 
@@ -276,44 +400,37 @@ async function main() {
       process.env.CONFLUENCE_SPACE_KEY,
       "CONFLUENCE_SPACE_KEY",
     );
-    const content = markdownToStorage(fs.readFileSync(path.resolve(file), "utf8"));
-    const url = new URL(`${config.baseUrl}/rest/api/content`);
-    let response;
+    const prepared = prepareContent(fs.readFileSync(path.resolve(file), "utf8"));
     try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${config.email}:${config.token}`).toString("base64")}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
+      const created = await request(config, "POST", "content", {
+        payload: {
           type: "page",
           title,
           ancestors: [{ id: parentId }],
           space: { key: spaceKey },
           body: {
             storage: {
-              value: content,
+              value: prepared.storage,
               representation: "storage",
             },
           },
-        }),
+        },
       });
-    } catch {
-      throw new Error("Unable to reach Confluence; check the URL and network connection.");
+      const page = created.data;
+      for (const diagram of prepared.diagrams) await uploadAttachment(config, page.id, diagram);
+      process.stdout.write(
+        `${JSON.stringify({
+          id: page.id,
+          title: page.title,
+          status: "created",
+          parent_id: parentId,
+          url: `${page._links?.base || config.baseUrl}${page._links?.webui || ""}`,
+          attached_diagrams: prepared.diagrams.map((diagram) => diagram.filename),
+        }, null, 2)}\n`,
+      );
+    } finally {
+      prepared.cleanup();
     }
-    if (!response.ok) await errorResponse(response);
-    const page = await response.json();
-    process.stdout.write(
-      `${JSON.stringify({
-        id: page.id,
-        title: page.title,
-        status: "created",
-        parent_id: parentId,
-        url: `${page._links?.base || config.baseUrl}${page._links?.webui || ""}`,
-      }, null, 2)}\n`,
-    );
     return;
   }
 
@@ -324,7 +441,11 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  process.stderr.write(`ERROR: ${error.message}\n`);
-  process.exitCode = 1;
-});
+module.exports = { markdownToStorage, prepareContent };
+
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`ERROR: ${error.message}\n`);
+    process.exitCode = 1;
+  });
+}

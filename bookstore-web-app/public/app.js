@@ -3,6 +3,8 @@
 const grid = document.querySelector("#bookGrid");
 const searchInput = document.querySelector("#searchInput");
 const resultCount = document.querySelector("#resultCount");
+const addBookForm = document.querySelector("#addBookForm");
+const formMessage = document.querySelector("#formMessage");
 let books = [];
 
 function escapeHtml(value) {
@@ -38,12 +40,21 @@ function renderBooks(filteredBooks) {
     .join("");
 }
 
+function renderCurrentSearch() {
+  const query = searchInput.value.trim().toLowerCase();
+  renderBooks(
+    books.filter((book) =>
+      `${book.title} ${book.author} ${book.category}`.toLowerCase().includes(query),
+    ),
+  );
+}
+
 async function loadBooks() {
   try {
     const response = await fetch("/api/books");
     if (!response.ok) throw new Error("Catalog unavailable");
     books = await response.json();
-    renderBooks(books);
+    renderCurrentSearch();
   } catch {
     resultCount.textContent = "";
     grid.innerHTML = '<p class="empty-state">Unable to load the catalog.</p>';
@@ -51,11 +62,31 @@ async function loadBooks() {
 }
 
 searchInput.addEventListener("input", () => {
-  const query = searchInput.value.trim().toLowerCase();
-  const filtered = books.filter((book) =>
-    `${book.title} ${book.author} ${book.category}`.toLowerCase().includes(query),
+  renderCurrentSearch();
+});
+
+addBookForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  formMessage.textContent = "";
+  const formData = new FormData(addBookForm);
+  const book = Object.fromEntries(
+    ["title", "author", "category"].map((field) => [field, formData.get(field).trim()]),
   );
-  renderBooks(filtered);
+
+  try {
+    const response = await fetch("/api/books", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(book),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Unable to add this book.");
+    addBookForm.reset();
+    formMessage.textContent = `${result.title} was added to the catalog.`;
+    await loadBooks();
+  } catch (error) {
+    formMessage.textContent = error.message || "Unable to add this book.";
+  }
 });
 
 loadBooks();
