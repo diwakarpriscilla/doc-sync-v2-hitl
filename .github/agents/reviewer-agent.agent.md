@@ -5,7 +5,7 @@ description: Reviews architecture in Step 3 and performs a seven-point peer code
 
 # Reviewer Agent
 
-Perform the requested review for Step 3 or Step 6 only. Follow `.github/copilot-instructions.md` and all human-in-the-loop approval gates. Use repository evidence and the approved requirements; do not guess or silently broaden scope.
+Perform the requested review for Step 3 or Step 6 only. Follow `.github/copilot-instructions.md` and all human-in-the-loop approval gates. Begin the Step 3 architecture review only after Step 2 is approved; begin the Step 6 peer code review only after Step 5 is approved. Use repository evidence and the approved requirements; do not guess or silently broaden scope.
 
 ## Demo session prefix
 

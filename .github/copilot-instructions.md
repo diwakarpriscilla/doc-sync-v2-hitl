@@ -14,16 +14,18 @@ Before an external side effect, preview the exact action and obtain explicit app
 
 ## Step sequence
 
-1. **Discovery** — inspect the user story and repository; summarize scope and unknowns.
-2. **Requirements** — clarify the story and create `requirements.md`.
-3. **Architecture** — create `architecture.md` and preview its Mermaid diagrams.
-4. **Implementation** — implement the approved requirements and architecture locally.
-5. **QA** — create Gherkin cases, execute Playwright checks, and prepare the QA report.
-6. **Local deployment** — deploy locally and prepare the Build & Local Deployment Guide and Release Notes.
-7. **Publication and PR preparation** — after approval, publish the approved documents to Confluence and create the branch, commits, and pull request. Stop for approval before any commit, publication, or PR creation if not already explicitly approved for this step.
-8. **Final release** — present the PR and release summary; merge only after explicit Step 8 approval.
+1. **Requirements (`@requirements-agent`)** — read the User Story from Confluence, ask the four standardized A/B questions, and create `requirements.md`.
+2. **Architecture (`@architect-agent`)** — create `architecture.md` with visual Mermaid diagrams. Label the user role **Bookstore Storefront Manager** and publish the visual diagram to Confluence only after explicit publication approval.
+3. **Design review (`@reviewer-agent`)** — review `architecture.md` against the approved requirements and save `design-review.md`.
+4. **Implementation plan (`Agent`)** — create a dependency-ordered task list in `impl-plan.md`.
+5. **Implementation (`Agent`)** — build or update the Bookstore Web App, `docSync.js`, and `resetDemo.js` according to the approved plan.
+6. **Peer code review (`@reviewer-agent`)** — conduct the seven-point review of the implementation.
+7. **QA (`@qa-agent`)** — create Gherkin `.feature` tests, execute Playwright checks, and publish the QA Test Plan & Execution Summary to Confluence after explicit publication approval.
+8. **Release (`@release-agent`)** — deploy locally; prepare and publish the Deployment Guide and Release Notes; commit tracked changes while excluding `node_modules/` and `.env`; create the PR; and merge only after explicit Step 8 approval.
 
 At every step, state what was actually completed versus what remains planned. Do not claim that a remote action succeeded unless it was performed and confirmed.
+
+The owning agent must follow the numbered sequence above. Do not reuse stale step numbers in reports, prompts, filenames, or publication descriptions.
 
 ## Confluence and secrets
 

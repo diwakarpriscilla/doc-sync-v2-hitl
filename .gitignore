@@ -1,6 +1,8 @@
+# Local environment secrets
 .env
 __pycache__/
 *.py[cod]
+# Installed package dependencies
 node_modules/
 test-results/
 playwright-report/
