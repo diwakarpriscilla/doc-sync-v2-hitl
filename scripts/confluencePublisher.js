@@ -32,30 +32,157 @@ function required(value, name) {
   return value;
 }
 
+function pageId(value, name) {
+  const id = required(value, name);
+  if (!/^\d+$/.test(id)) {
+    throw new Error(`${name} must be a numeric Confluence page ID, not a URL.`);
+  }
+  return id;
+}
+
+function demoSession(args) {
+  const supplied = option(args, "--demo") || process.env.DEMO_SESSION;
+  if (!supplied) {
+    throw new Error(
+      "Please provide your Demo session number such as Demo-1 or Demo-2 before we begin",
+    );
+  }
+  if (!/^Demo-[1-9]\d*$/.test(supplied)) {
+    throw new Error("DEMO_SESSION must use the format Demo-1, Demo-2, or another positive integer suffix.");
+  }
+  return supplied;
+}
+
+function demoTitle(args, title) {
+  const prefix = `[${demoSession(args)}]`;
+  return title.startsWith(prefix) ? title : `${prefix} ${title}`;
+}
+
 function getConfig() {
-  let baseUrl = required(
+  const baseUrlValue = required(
     process.env.CONFLUENCE_URL || process.env.CONFLUENCE_BASE_URL,
     "CONFLUENCE_URL",
-  ).replace(/\/+$/, "");
+  ).trim();
+  let normalizedBaseUrl;
   try {
-    const url = new URL(baseUrl);
-    if (
-      url.hostname.endsWith(".atlassian.net") &&
-      !url.pathname.replace(/\/+$/, "").endsWith("/wiki")
-    ) {
-      baseUrl = `${baseUrl}/wiki`;
+    const url = new URL(baseUrlValue);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      throw new Error("unsupported protocol");
     }
+    const pathname = url.pathname.replace(/\/+$/, "");
+    url.pathname = pathname.endsWith("/wiki") ? pathname : `${pathname}/wiki`;
+    url.search = "";
+    url.hash = "";
+    normalizedBaseUrl = url.toString().replace(/\/+$/, "");
   } catch {
-    throw new Error("CONFLUENCE_URL must be a valid absolute URL.");
+    throw new Error("CONFLUENCE_URL must be a valid absolute HTTP(S) URL.");
   }
   return {
-    baseUrl,
+    baseUrl: normalizedBaseUrl,
     email: required(process.env.CONFLUENCE_EMAIL, "CONFLUENCE_EMAIL"),
     token: required(
       process.env.CONFLUENCE_API_TOKEN || process.env.JIRA_SSO_PAT,
       "CONFLUENCE_API_TOKEN (or JIRA_SSO_PAT)",
     ),
   };
+}
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function inlineMarkdown(value) {
+  return escapeHtml(value)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>");
+}
+
+function markdownToStorage(markdown) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  let paragraph = [];
+  let listType = null;
+  let codeLines = null;
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      blocks.push(`<p>${paragraph.map(inlineMarkdown).join("<br />")}</p>`);
+      paragraph = [];
+    }
+  };
+  const closeList = () => {
+    if (listType) {
+      blocks.push(`</${listType}>`);
+      listType = null;
+    }
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      flushParagraph();
+      closeList();
+      if (codeLines) {
+        blocks.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+        codeLines = null;
+      } else {
+        codeLines = [];
+      }
+      continue;
+    }
+    if (codeLines) {
+      codeLines.push(line);
+      continue;
+    }
+    if (!line.trim()) {
+      flushParagraph();
+      closeList();
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      const level = heading[1].length;
+      blocks.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const item = line.match(/^\s*(?:[-*]\s+|(\d+)\.\s+)(.+)$/);
+    if (item) {
+      flushParagraph();
+      const nextListType = item[1] ? "ol" : "ul";
+      if (listType !== nextListType) {
+        closeList();
+        blocks.push(`<${nextListType}>`);
+        listType = nextListType;
+      }
+      blocks.push(`<li><p>${inlineMarkdown(item[2])}</p></li>`);
+      continue;
+    }
+
+    closeList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  closeList();
+  if (codeLines) {
+    blocks.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+  }
+  return blocks.join("\n");
+}
+
+async function errorResponse(response) {
+  const body = await response.text();
+  const detail = body || "(empty response body)";
+  throw new Error(`Confluence API returned HTTP ${response.status}: ${detail}`);
 }
 
 async function api(config, method, pageId, payload) {
@@ -78,10 +205,8 @@ async function api(config, method, pageId, payload) {
   } catch {
     throw new Error("Unable to reach Confluence; check the URL and network connection.");
   }
-  if (!response.ok) {
-    throw new Error(`Confluence API returned HTTP ${response.status}.`);
-  }
-  return response.json();
+  if (!response.ok) await errorResponse(response);
+  return { ...(await response.json()), _httpStatus: response.status };
 }
 
 async function main() {
@@ -89,15 +214,16 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
   if (command === "read") {
     const config = getConfig();
-    const pageId = required(
+    const id = pageId(
       option(args, "--page-id") || process.env.CONFLUENCE_STORY_PAGE_ID,
       "CONFLUENCE_STORY_PAGE_ID or --page-id",
     );
-    const page = await api(config, "GET", pageId);
+    const page = await api(config, "GET", id);
     process.stdout.write(
       `${JSON.stringify({
         id: page.id,
         title: page.title,
+        http_status: page._httpStatus,
         version: page.version?.number,
         url: `${page._links?.base || config.baseUrl}${page._links?.webui || ""}`,
         content: page.body?.storage?.value,
@@ -111,13 +237,13 @@ async function main() {
       throw new Error("Confluence writes require explicit approval and the --approved flag.");
     }
     const config = getConfig();
-    const pageId = required(option(args, "--page-id"), "--page-id");
-    const title = required(option(args, "--title"), "--title");
+    const id = pageId(option(args, "--page-id"), "--page-id");
+    const title = demoTitle(args, required(option(args, "--title"), "--title"));
     const file = required(option(args, "--file"), "--file");
-    const content = fs.readFileSync(path.resolve(file), "utf8");
-    const current = await api(config, "GET", pageId);
-    const page = await api(config, "PUT", pageId, {
-      id: pageId,
+    const content = markdownToStorage(fs.readFileSync(path.resolve(file), "utf8"));
+    const current = await api(config, "GET", id);
+    const page = await api(config, "PUT", id, {
+      id,
       type: "page",
       title,
       version: { number: current.version.number + 1 },
@@ -140,9 +266,9 @@ async function main() {
       throw new Error("Confluence writes require explicit approval and the --approved flag.");
     }
     const config = getConfig();
-    const title = required(option(args, "--title"), "--title");
+    const title = demoTitle(args, required(option(args, "--title"), "--title"));
     const file = required(option(args, "--file"), "--file");
-    const parentId = required(
+    const parentId = pageId(
       option(args, "--parent-id") || process.env.CONFLUENCE_STORY_PAGE_ID,
       "CONFLUENCE_STORY_PAGE_ID or --parent-id",
     );
@@ -150,7 +276,7 @@ async function main() {
       process.env.CONFLUENCE_SPACE_KEY,
       "CONFLUENCE_SPACE_KEY",
     );
-    const content = fs.readFileSync(path.resolve(file), "utf8");
+    const content = markdownToStorage(fs.readFileSync(path.resolve(file), "utf8"));
     const url = new URL(`${config.baseUrl}/rest/api/content`);
     let response;
     try {
@@ -177,9 +303,7 @@ async function main() {
     } catch {
       throw new Error("Unable to reach Confluence; check the URL and network connection.");
     }
-    if (!response.ok) {
-      throw new Error(`Confluence API returned HTTP ${response.status}.`);
-    }
+    if (!response.ok) await errorResponse(response);
     const page = await response.json();
     process.stdout.write(
       `${JSON.stringify({
@@ -195,8 +319,8 @@ async function main() {
 
   throw new Error(
     "Usage: node scripts/confluencePublisher.js read [--page-id ID]\n" +
-      "   or: node scripts/confluencePublisher.js publish --page-id ID --title TITLE --file FILE --approved\n" +
-      "   or: node scripts/confluencePublisher.js create --title TITLE --file FILE --parent-id ID --approved",
+      "   or: node scripts/confluencePublisher.js publish --page-id ID --title TITLE --file FILE --demo Demo-1 --approved\n" +
+      "   or: node scripts/confluencePublisher.js create --title TITLE --file FILE --parent-id ID --demo Demo-1 --approved",
   );
 }
 

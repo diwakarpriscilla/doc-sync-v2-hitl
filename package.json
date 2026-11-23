@@ -1,0 +1,10 @@
+{
+  "name": "doc-sync-v2-hitl",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}
