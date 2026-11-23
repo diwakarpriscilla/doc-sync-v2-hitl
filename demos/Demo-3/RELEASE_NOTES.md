@@ -26,7 +26,7 @@ The local bookstore server was started successfully on port 3000. The homepage, 
 |---|---|
 | Homepage | HTTP 200 with HTML content |
 | Catalog API | `GET /api/books` returned 3 starter books |
-| Unit tests | 10 passed, 0 failed, including Mermaid SVG rendering |
+| Unit tests | 11 passed, 0 failed, including Mermaid SVG rendering and attachment handling |
 | Bookstore browser/API tests | 4 passed, 0 failed |
 | Catalog after browser checks | Three starter books remained |
 
@@ -49,7 +49,7 @@ Commands verified:
 - **Major:** CommonJS named function assignments such as `exports.lookup = function lookup(...)` are not extracted.
 - **Major:** markerless existing README handling can return success despite skipping the required update.
 - **Test coverage:** add regressions for quoted-key redaction, cross-block routes, CommonJS export extraction, and nonzero skipped-document outcomes.
-- **Dependency audit:** no fresh advisory audit was run; the reviewed dependency was development-only.
+- **Dependency audit:** the latest install-time audit reported 0 vulnerabilities across 196 packages. This does not resolve the application-level findings above.
 
 The quoted-key redaction, route-pairing, CommonJS extraction, and markerless-document findings remain unresolved.
 
@@ -61,8 +61,10 @@ The publisher now renders Mermaid fenced blocks locally as SVG, uploads the imag
 
 - Deployed locally only.
 - No Confluence write was performed.
-- No Git branch or commit was created.
-- No push or pull request was created.
+- User-confirmed commit `897ea6c` is on local `main`; `demo-baseline` points to it.
+- Local `main` is five commits ahead of `origin/main`.
+- Follow-up deployment/release document and publisher test changes remain uncommitted.
+- No push, pull request, or merge was performed.
 - No merge was performed.
 - The server process remains available at `http://localhost:3000`.
 

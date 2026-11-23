@@ -10,7 +10,7 @@
 
 ## Repository state
 
-The repository currently has working-tree changes and untracked Demo-3 implementation/test artifacts. The active branch was `main`. These artifacts include implementation and review files under `demos/Demo-3/` and the existing modified bookstore application files. No unrelated files were overwritten for this step.
+The user-confirmed commit `897ea6c` is on local `main`, and the `demo-baseline` tag points to it. Local `main` is five commits ahead of `origin/main`. The current uncommitted follow-up changes are limited to the deployment/release documents and Confluence publisher helper/tests; no push or pull request has been performed.
 
 ## Build and verification
 
@@ -18,7 +18,7 @@ This Node application does not declare a separate build step. The server is a de
 
 | Check | Command | Verified result |
 |---|---|---|
-| Unit tests | `npm run test:unit` | Passed: 10 tests passed, 0 failed, including Mermaid-to-SVG rendering |
+| Unit tests | `npm run test:unit` | Passed: 11 tests passed, 0 failed, including Mermaid-to-SVG rendering and attachment handling |
 | Bookstore browser/API tests | `npx playwright test tests/e2e/bookstore.spec.js` | Passed: 4 tests passed, 0 failed in 19.2 seconds |
 | Port check | PowerShell `Get-NetTCPConnection -LocalPort 3000 -State Listen` | Port 3000 was free before startup |
 | Local server start | `npm start --prefix bookstore-web-app` | Started: `Bookstore web app listening at http://localhost:3000` |
@@ -73,6 +73,6 @@ The implementation is locally functional, but the following findings prevent rel
 3. **Major — CommonJS export extraction:** `docSync.js:90-104` misses named functions assigned through forms such as `exports.lookup = function lookup(...)`.
 4. **Major — markerless README exit status:** `docSync.js:277,293` may return exit code 0 after skipping a markerless existing README, so automation cannot distinguish incomplete synchronization from success.
 5. **Test coverage gap:** The passing suite does not cover the quoted-key leak, cross-block route pairing, `exports.name = function` extraction, or nonzero status for skipped docs.
-6. **Dependency and security follow-up:** The dependency review found no runtime dependencies and identified `@playwright/test@1.65.1` as development-only, but a fresh package advisory audit was not run.
+6. **Dependency and security follow-up:** The app server has no added runtime dependency. The current development dependencies include `@playwright/test` and `@mermaid-js/mermaid-cli`; the install-time audit reported 0 vulnerabilities across 196 packages.
 
-These findings require implementation fixes and regression checks before the release could be considered ready. No fixes were applied in Step 6.
+These findings require implementation fixes and regression checks before the release could be considered ready. The Mermaid publisher changes do not resolve these documentation-sync findings.

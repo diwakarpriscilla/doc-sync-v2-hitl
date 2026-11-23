@@ -441,7 +441,7 @@ async function main() {
   );
 }
 
-module.exports = { markdownToStorage, prepareContent };
+module.exports = { markdownToStorage, prepareContent, uploadAttachment };
 
 if (require.main === module) {
   main().catch((error) => {
