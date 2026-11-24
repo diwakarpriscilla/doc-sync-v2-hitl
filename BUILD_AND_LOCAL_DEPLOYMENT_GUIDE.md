@@ -1,56 +1,57 @@
-# Build and Local Deployment Guide
+# [Demo-5] Build & Local Deployment Guide
+
+## Status
+
+- **Session:** Demo-5
+- **Environment:** Local workstation only
+- **Local URL:** `http://localhost:3000`
+- **Deployment mode:** Local verification only
+- **Confluence publication:** Not performed until Step 8 approval
 
 ## Prerequisites
 
 - Windows 10 or later
-- Python 3.9 or later
 - Node.js 18 or later
 - Git
+- Repository dependencies installed locally
 
 ## Build
 
-This repository does not require a compiled build. The Python package and Node.js helper can be validated directly.
+This repository does not require a separate compiled build. Validate the Node.js application and helper directly:
 
 ```powershell
-python -m unittest discover -s tests -v
+npm run test:unit
+npm run test:e2e
+node docSync.js ./bookstore-web-app
 node --check scripts\confluencePublisher.js
 ```
 
 ## Local deployment
 
-1. Run the unit tests.
-2. Confirm `.env` is ignored by Git.
-3. Run the sync CLI in dry-run mode with a temporary mapping file:
+1. Run `npm run test:unit`; all 10 Node tests must pass.
+2. Run `npm run test:e2e`; all 8 Playwright tests must pass.
+3. Run `node docSync.js ./bookstore-web-app`; verify the CLI exits successfully.
+4. Confirm `.env` is ignored by Git and `node_modules/` is not tracked.
+5. Start the local bookstore server:
 
 ```powershell
-python -m src.doc_sync.__main__ `
-  --dry-run `
-  --source-revision local `
-  --changed-files '["README.md"]' `
-  --mapping-file mapping.json `
-  --report-file .sync-report.json
+npm start --prefix bookstore-web-app
 ```
 
-The mapping file should contain a source path key and Confluence target:
+6. Open `http://localhost:3000/`.
+7. Verify `GET http://localhost:3000/api/books`.
+8. Stop the server with `Ctrl+C` after verification if it was started manually.
 
-```json
-{
-  "README.md": {
-    "title": "Repository Readme",
-    "page_id": "PAGE_ID"
-  }
-}
-```
+## Verification results
 
-For local validation, set `CONFLUENCE_*` variables only if live publishing is required. Dry-run mode does not read or require Confluence credentials.
-
-## Verification
-
-- Unit test exit code is `0`.
-- The Node.js helper passes `node --check`.
-- Dry-run creates a JSON report and makes no Confluence API request.
-- `.env` remains excluded from Git.
+- 10 Node unit tests pass, 0 fail.
+- 8 Playwright tests pass, 0 fail.
+- `node docSync.js ./bookstore-web-app` exits successfully.
+- The CLI scans 2 JavaScript files, updates the marker-bounded `API_DOCS.md`, and preserves `README.md` because it has no valid marker pair.
+- `node --check scripts\confluencePublisher.js` passes.
+- `.env` remains ignored and `node_modules/` remains excluded from Git.
+- The live catalog is restored to 3 starter books after browser validation.
 
 ## Local stop and rollback
 
-Stop with `Ctrl+C` for an interactive process. No Confluence content or Git state is modified by local deployment. Remove generated local reports and temporary mappings if they are not needed.
+Stop the local server with `Ctrl+C`. No shared, staging, or production environment was modified. No live Confluence content was changed.

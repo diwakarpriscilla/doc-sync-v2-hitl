@@ -31,6 +31,11 @@ test("catalog search filters books", async ({ page }) => {
   await expect(page.locator(".book-card")).toHaveCount(1);
   await expect(page.getByText("1 book", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Atomic Habits" })).toBeVisible();
+
+  await page.getByRole("searchbox", { name: "Search books" }).fill("Creativity");
+  await expect(page.locator(".book-card")).toHaveCount(1);
+  await expect(page.getByText("1 book", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The Creative Act" })).toBeVisible();
 });
 
 test("Playwright adds and retains The Pragmatic Programmer as a featured arrival", async ({ page }) => {
