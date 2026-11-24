@@ -1,11 +1,11 @@
 Feature: Bookstore demo
 
-  Scenario: Homepage shows the baseline catalog and version banner
+  Scenario: Homepage shows the live catalog and version banner
     Given the bookstore app is running
     When I open the homepage
     Then the page title is Bookstore
-    And the page shows "Version 1.0 - Baseline"
-    And 3 starter books are visible
+    And the page shows "Version 2.0 - Live Demo"
+    And 4 live books are visible
 
   Scenario: Catalog search filters books
     Given the bookstore app is running
@@ -21,9 +21,9 @@ Feature: Bookstore demo
     Then 1 matching book is visible
     And "The Creative Act" is visible
 
-  Scenario: The Playwright demo adds a persistent featured new arrival
-    Given the baseline catalog contains 3 starter books
-    When the Playwright browser adds "The Pragmatic Programmer" as a featured new arrival
+  Scenario: The live Playwright catalog retains the featured new arrival
+    Given the live catalog contains "The Pragmatic Programmer"
+    When I reload the Playwright browser
     Then the catalog displays 4 books
     And the new book has a "Featured / New Arrival" badge
     And the book remains after reloading the page

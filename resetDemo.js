@@ -33,4 +33,12 @@ fs.writeFileSync(
   JSON.stringify(starterBooks, null, 2) + "\n",
 );
 
-console.log("Demo reset complete: 3 starter books restored; documentation files preserved.");
+const indexPath = path.join(appDir, "public", "index.html");
+const indexHtml = fs.readFileSync(indexPath, "utf8");
+const baselineIndexHtml = indexHtml.replace(
+  "Version 2.0 - Live Demo",
+  "Version 1.0 - Baseline",
+);
+fs.writeFileSync(indexPath, baselineIndexHtml, "utf8");
+
+console.log("Demo reset complete: 3 starter books restored; Version 1.0 - Baseline restored.");

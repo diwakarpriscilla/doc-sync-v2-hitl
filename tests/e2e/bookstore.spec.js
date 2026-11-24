@@ -16,11 +16,11 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("homepage shows the baseline catalog and version banner", async ({ page }) => {
+test("homepage shows the live catalog and version banner", async ({ page }) => {
   await expect(page).toHaveTitle("Bookstore");
-  await expect(page.getByText("Version 1.0 - Baseline")).toBeVisible();
+  await expect(page.getByText("Version 2.0 - Live Demo")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Find your next favorite book." })).toBeVisible();
-  await expect.poll(async () => page.locator(".book-card").count()).toBeGreaterThanOrEqual(3);
+  await expect.poll(async () => page.locator(".book-card").count()).toBeGreaterThanOrEqual(4);
   await expect(page.locator(".book-card")).toHaveCount(
     JSON.parse(fs.readFileSync(booksPath, "utf8")).length,
   );
@@ -83,11 +83,17 @@ test("manual reset restores baseline data in an isolated copy", async () => {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bookstore-reset-test-"));
   const temporaryApp = path.join(temporaryRoot, "bookstore-web-app");
   const temporaryData = path.join(temporaryApp, "data");
+  const temporaryPublic = path.join(temporaryApp, "public");
   const temporaryReadme = path.join(temporaryApp, "README.md");
   const readme = "# Keep human documentation unchanged.\n";
   try {
     fs.mkdirSync(temporaryData, { recursive: true });
+    fs.mkdirSync(temporaryPublic, { recursive: true });
     fs.copyFileSync(path.join(repositoryRoot, "resetDemo.js"), path.join(temporaryRoot, "resetDemo.js"));
+    fs.writeFileSync(
+      path.join(temporaryPublic, "index.html"),
+      '<p class="baseline-banner">Version 2.0 - Live Demo</p>',
+    );
     fs.writeFileSync(
       path.join(temporaryData, "books.json"),
       JSON.stringify([
@@ -104,6 +110,9 @@ test("manual reset restores baseline data in an isolated copy", async () => {
 
     const resetCatalog = JSON.parse(fs.readFileSync(path.join(temporaryData, "books.json"), "utf8"));
     expect(resetCatalog).toHaveLength(3);
+    const resetIndex = fs.readFileSync(path.join(temporaryPublic, "index.html"), "utf8");
+    expect(resetIndex).toContain("Version 1.0 - Baseline");
+    expect(resetIndex).not.toContain("Version 2.0 - Live Demo");
     expect(fs.readFileSync(temporaryReadme, "utf8")).toBe(readme);
   } finally {
     fs.rmSync(temporaryRoot, { recursive: true, force: true });

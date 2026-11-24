@@ -47,12 +47,12 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("the baseline bookstore view remains available after demo additions", async ({ page }) => {
+test("the live bookstore view remains available after demo additions", async ({ page }) => {
   await test.step("verify the browser-rendered bookstore preview", async () => {
     await expect(page).toHaveTitle("Bookstore");
     await expect(page.getByRole("heading", { name: "Find your next favorite book." })).toBeVisible();
-    await expect.poll(async () => page.locator(".book-card").count()).toBeGreaterThanOrEqual(3);
-    await expect(page.getByText("Version 1.0 - Baseline")).toBeVisible();
+    await expect.poll(async () => page.locator(".book-card").count()).toBeGreaterThanOrEqual(4);
+    await expect(page.getByText("Version 2.0 - Live Demo")).toBeVisible();
     await expect(page.getByRole("heading", { name: "The Midnight Library" })).toBeVisible();
   });
 });
