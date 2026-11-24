@@ -1,33 +1,41 @@
-# Release Notes
+# [Demo-4] Release Notes
 
 ## Release summary
 
-This release adds the initial structure and workflow documentation for the Automated Documentation Sync pipeline:
+Demo-4 provides a human-in-the-loop documentation synchronization workflow for the `./bookstore-web-app` target.
 
-- requirements and implementation design documentation;
-- Python modules for configuration, discovery, mapping, rendering, reporting, and Confluence operations;
-- a Confluence CLI and JSON report output;
-- unit tests for discovery, mapping, rendering, and missing configuration;
-- repository agents and skills for the 8-step human-in-the-loop SDLC;
-- a Node.js Confluence publisher with an explicit publication approval guard;
-- masked Atlassian credentials in VS Code MCP configuration.
+Implemented and verified behavior includes:
 
-## Validation
+- Recursive JavaScript discovery with `.git` and `node_modules` excluded.
+- Detection of `GET`, `POST`, `PUT`, and `DELETE` HTTP routes.
+- Detection of exported and JSDoc-documented JavaScript functions.
+- Deterministic README and API documentation rendering.
+- Automatic creation of missing README and API documentation files.
+- Marker-bounded updates that preserve manual text outside `<!-- DOC-SYNC-START -->` and `<!-- DOC-SYNC-END -->`.
+- `[REDACTED]` handling for recognized `DB_PASSWORD`, `JWT_SECRET`, and `API_TOKEN` values.
+- `created`, `updated`, `unchanged`, and `blocked` result reporting.
+- Unit and Playwright coverage for discovery, marker behavior, redaction, reset behavior, and browser preview.
 
-- 4 Python unit tests pass.
-- `scripts/confluencePublisher.js` passes Node.js syntax validation.
-- The MCP configuration passes JSON validation.
-- Publication without `--approved` is blocked.
-- `.env` is confirmed as Git-ignored.
+## Validation summary
+
+- `npm run test:unit`: 12 passed, 0 failed.
+- Fixed-target CLI: 2 JavaScript files scanned; 2 endpoints found; `README.md` blocked; `API_DOCS.md` unchanged.
+- Demo-4 Playwright run: 5 passed, 1 failed.
+- Full Playwright run: 13 passed, 1 failed across 14 checks.
+- Marker, redaction, missing-document creation, reset, and bookstore HTML preview probes passed.
+
+The one automated failure confirms that the CLI accepts custom target arguments. The peer review identified this as a Major scope issue. It remains an open limitation and is not reported as resolved.
 
 ## Known limitations
 
-- No Playwright dependency or test runner is currently configured.
-- No `resetDemo.js` exists in the repository.
-- The Confluence publisher supports updating existing pages and creating child pages beneath an approved parent.
-- Live Confluence reads/publishing have not been executed.
-- The README and workflow require review before production use.
+- The fixed `./bookstore-web-app` boundary is not enforced by rejecting custom CLI target arguments.
+- The fixed-target `README.md` currently lacks a complete DOC-SYNC marker pair and is therefore blocked.
+- Atomic write/rename cleanup is implemented but lacks a direct forced-failure test.
+- Markdown is not rendered into the bookstore web UI; generated documentation is verified through CLI and file assertions.
+- Live Confluence publication and merge status are not represented as successful until separately approved and confirmed.
 
-## Deployment notes
+## Deployment and release
 
-Use the Build and Local Deployment Guide. Live deployment or Confluence publication is prohibited until the corresponding human approval checkpoint.
+Use `BUILD_AND_LOCAL_DEPLOYMENT_GUIDE.md` for the local-only procedure. The repository deploys no shared or production service in this workflow.
+
+External release actions—Confluence publication, branch creation, commit, push, pull request creation, and merge—remain approval-gated and require separate explicit confirmation.

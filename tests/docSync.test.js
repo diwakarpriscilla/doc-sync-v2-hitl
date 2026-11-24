@@ -80,7 +80,40 @@ test("skips existing documents without valid markers", () => {
     const original = "# Human README\nKeep all notes.";
     fs.writeFileSync(file, original);
     const result = renderDocument(file, "README", "generated");
-    assert.equal(result.status, "skipped");
+    assert.equal(result.status, "blocked");
+    assert.equal(result.content, original);
+  });
+});
+
+test("blocks existing documents with duplicate marker pairs", () => {
+  withTempFolder((folder) => {
+    const file = path.join(folder, "README.md");
+    const original = [
+      "<!-- DOC-SYNC-START -->",
+      "first",
+      "<!-- DOC-SYNC-END -->",
+      "<!-- DOC-SYNC-START -->",
+      "second",
+      "<!-- DOC-SYNC-END -->",
+    ].join("\n");
+    fs.writeFileSync(file, original);
+
+    const result = renderDocument(file, "README", "generated");
+
+    assert.equal(result.status, "blocked");
+    assert.equal(result.content, original);
+  });
+});
+
+test("reports unchanged marked content without rewriting", () => {
+  withTempFolder((folder) => {
+    const file = path.join(folder, "README.md");
+    const original = "# Human README\n\n<!-- DOC-SYNC-START -->\nGenerated output\n<!-- DOC-SYNC-END -->\n\nHuman footer.";
+    fs.writeFileSync(file, original);
+
+    const result = renderDocument(file, "README", "Generated output");
+
+    assert.equal(result.status, "unchanged");
     assert.equal(result.content, original);
   });
 });

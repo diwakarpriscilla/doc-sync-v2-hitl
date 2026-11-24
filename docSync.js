@@ -222,13 +222,18 @@ function renderDocument(filePath, title, generatedContent) {
     original.indexOf(START_MARKER, startIndex + START_MARKER.length) !== -1 ||
     original.indexOf(END_MARKER, endIndex + END_MARKER.length) !== -1
   ) {
-    return { status: "skipped", content: original };
+    return { status: "blocked", content: original };
   }
 
   const contentStart = startIndex + START_MARKER.length;
+  const generatedSection = `\n${generatedContent}\n`;
+  if (original.slice(contentStart, endIndex) === generatedSection) {
+    return { status: "unchanged", content: original };
+  }
+
   return {
     status: "updated",
-    content: `${original.slice(0, contentStart)}\n${generatedContent}\n${original.slice(endIndex)}`,
+    content: `${original.slice(0, contentStart)}${generatedSection}${original.slice(endIndex)}`,
   };
 }
 
@@ -274,7 +279,9 @@ function run(targetArgument) {
     }));
 
     for (const result of results) {
-      if (result.status !== "skipped") atomicWrite(result.file, redactSensitive(result.content));
+      if (result.status === "created" || result.status === "updated") {
+        atomicWrite(result.file, redactSensitive(result.content));
+      }
     }
 
     console.log(`Target folder: ${targetFolder}`);
@@ -284,11 +291,15 @@ function run(targetArgument) {
     console.log(`Discovered ${generated.endpoints.length} endpoint(s) and ${generated.functions.length} function(s).`);
     for (const result of results) {
       const relativePath = path.relative(targetFolder, result.file).split(path.sep).join("/");
-      if (result.status === "skipped") {
-        console.warn(`WARNING: ${relativePath} has no valid DOC-SYNC marker pair; preserved and skipped.`);
-      } else {
-        console.log(`${result.status === "created" ? "Created" : "Updated"} ${relativePath} generated section.`);
+      if (result.status === "blocked") {
+        console.warn(`WARNING: ${relativePath} has no valid DOC-SYNC marker pair; preserved and blocked.`);
+        continue;
       }
+      if (result.status === "unchanged") {
+        console.log(`Unchanged ${relativePath} generated section.`);
+        continue;
+      }
+      console.log(`${result.status === "created" ? "Created" : "Updated"} ${relativePath} generated section.`);
     }
     return 0;
   } catch (error) {

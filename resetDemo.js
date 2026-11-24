@@ -27,31 +27,10 @@ const starterBooks = [
   },
 ];
 
-const readme = `# Bookstore Web App
-
-A dependency-light bookstore web app that runs at http://localhost:3000.
-
-## Run
-
-\`\`\`powershell
-cd bookstore-web-app
-npm start
-\`\`\`
-
-## Reset demo data
-
-\`\`\`powershell
-node resetDemo.js
-\`\`\`
-
-This restores the three starter books and the bookstore README.
-`;
-
 const appDir = path.join(__dirname, "bookstore-web-app");
 fs.writeFileSync(
   path.join(appDir, "data", "books.json"),
   JSON.stringify(starterBooks, null, 2) + "\n",
 );
-fs.writeFileSync(path.join(appDir, "README.md"), readme);
 
-console.log("Demo reset complete: 3 starter books and bookstore README restored.");
+console.log("Demo reset complete: 3 starter books restored; existing README and API documentation preserved.");

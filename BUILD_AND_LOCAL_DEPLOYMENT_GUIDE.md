@@ -1,56 +1,88 @@
-# Build and Local Deployment Guide
+# [Demo-4] Build & Local Deployment Guide
+
+## Scope
+
+This guide describes local validation and local deployment of the Demo-4 automated documentation synchronization workflow in the `doc-sync-v2-hitl` repository. It does not authorize Confluence publication, a Git commit or push, a pull request, or merge.
+
+The fixed Demo-4 target is `./bookstore-web-app`. The workflow discovers JavaScript source files, excludes `.git` and `node_modules`, extracts supported HTTP routes and JavaScript functions, redacts recognized secret values, and updates only valid `DOC-SYNC` marker sections.
 
 ## Prerequisites
 
 - Windows 10 or later
-- Python 3.9 or later
 - Node.js 18 or later
+- npm
 - Git
+- Playwright Chromium browser
+- Repository dependencies installed from `package-lock.json`
+- `.env` kept locally and excluded by Git for any Confluence command
 
 ## Build
 
-This repository does not require a compiled build. The Python package and Node.js helper can be validated directly.
+Demo-4 has no compiled application build. Install dependencies and validate repository syntax and test behavior:
 
 ```powershell
-python -m unittest discover -s tests -v
-node --check scripts\confluencePublisher.js
+npm install
+npm run test:unit
+node --check docSync.js
+node --check resetDemo.js
+node --check scripts/confluencePublisher.js
+node docSync.js ./bookstore-web-app
 ```
+
+The unit command runs Node's test runner for `tests/docSync.test.js` and `tests/confluencePublisher.test.js`.
 
 ## Local deployment
 
-1. Run the unit tests.
-2. Confirm `.env` is ignored by Git.
-3. Run the sync CLI in dry-run mode with a temporary mapping file:
+The local deployment target is the repository's `./bookstore-web-app` folder. Deploy locally by running the sync CLI:
 
 ```powershell
-python -m src.doc_sync.__main__ `
-  --dry-run `
-  --source-revision local `
-  --changed-files '["README.md"]' `
-  --mapping-file mapping.json `
-  --report-file .sync-report.json
+node docSync.js ./bookstore-web-app
 ```
 
-The mapping file should contain a source path key and Confluence target:
+Inspect the resulting status report and these files:
 
-```json
-{
-  "README.md": {
-    "title": "Repository Readme",
-    "page_id": "PAGE_ID"
-  }
-}
-```
+- `bookstore-web-app/README.md`
+- `bookstore-web-app/API_DOCS.md`
 
-For local validation, set `CONFLUENCE_*` variables only if live publishing is required. Dry-run mode does not read or require Confluence credentials.
+The fixed-target validation environment produced:
+
+- 2 JavaScript files scanned
+- 2 supported endpoints: `GET /api/books` and `POST /api/books`
+- 0 JavaScript functions
+- `README.md`: blocked because the file lacks a valid `DOC-SYNC` marker pair
+- `API_DOCS.md`: unchanged
+
+`README.md` is intentionally preserved and not overwritten when its marker pair is invalid. `API_DOCS.md` remains unchanged when generated marker content is byte-identical.
 
 ## Verification
 
-- Unit test exit code is `0`.
-- The Node.js helper passes `node --check`.
-- Dry-run creates a JSON report and makes no Confluence API request.
-- `.env` remains excluded from Git.
+Run unit and browser validation from the repository root:
 
-## Local stop and rollback
+```powershell
+npm run test:unit
+npx playwright test tests/e2e/demo4.spec.js
+```
 
-Stop with `Ctrl+C` for an interactive process. No Confluence content or Git state is modified by local deployment. Remove generated local reports and temporary mappings if they are not needed.
+Verified evidence:
+
+- Unit suite: 12 passed, 0 failed.
+- Demo-4 Playwright execution: 5 passed, 1 failed.
+- Full Playwright suite: 13 passed, 1 failed across 14 checks.
+- The generated API documentation contains `GET /api/books` and `POST /api/books`.
+- Known `DB_PASSWORD`, `JWT_SECRET`, and `API_TOKEN` values were redacted as `[REDACTED]`.
+- Temporary-folder marker probes preserved text outside the marker pair and created missing API documentation.
+- Reset behavior restored starter catalog data and left documentation unchanged.
+
+The remaining automated failure is the custom-target scope guard: `docSync.js` currently accepts a target argument instead of enforcing or rejecting targets outside `./bookstore-web-app`. This matches the Major scope finding in `peer-code-review.md` and is not treated as a successful release gate.
+
+## Start and stop locally
+
+For the browser preview, use the repository's existing Playwright configuration or serve the static app according to local repository instructions. Stop any local preview process with `Ctrl+C`.
+
+The sync CLI does not start a shared or production service. Its local deployment modifies only documentation under `./bookstore-web-app` and only between valid DOC-SYNC markers.
+
+## Rollback
+
+Stop the sync CLI and any local preview process. Restore only repository documentation or test state using Git or the reviewed repository reset workflow. Do not restore secrets or overwrite `.env` or `node_modules/`.
+
+No Confluence publication, remote deployment, Git branch or commit, push, or pull request is performed by this guide.
