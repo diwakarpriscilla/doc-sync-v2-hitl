@@ -59,6 +59,18 @@ main {
   margin-bottom: 56px;
 }
 
+.baseline-banner {
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font: 700 0.78rem Arial, sans-serif;
+  letter-spacing: 0.04em;
+}
+
 .hero h1 {
   margin: 8px 0 16px;
   font-size: clamp(2.8rem, 7vw, 5.4rem);
@@ -102,6 +114,18 @@ main {
   gap: 6px;
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.add-book-form label.featured-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  color: var(--ink);
+}
+
+.featured-toggle input {
+  accent-color: var(--accent);
 }
 
 .add-book-form input {
@@ -198,6 +222,17 @@ main {
 
 .book-details {
   padding: 18px;
+}
+
+.book-badge {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f5dfb7;
+  color: #573414;
+  font: 700 0.7rem Arial, sans-serif;
+  letter-spacing: 0.03em;
 }
 
 .book-details h3 {

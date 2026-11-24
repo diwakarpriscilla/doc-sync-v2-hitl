@@ -103,10 +103,23 @@ async function handleAddBook(request, response) {
     book[field] = value;
   }
 
+  if (
+    input &&
+    Object.hasOwn(input, "isNewArrival") &&
+    typeof input.isNewArrival !== "boolean"
+  ) {
+    sendJson(response, 400, { error: "isNewArrival must be a boolean." });
+    return;
+  }
+
   try {
     const books = readBooks();
     const color = coverColors[books.length % coverColors.length];
-    Object.assign(book, { color, textColor: "#17211b" });
+    Object.assign(book, {
+      color,
+      textColor: "#17211b",
+      isNewArrival: input?.isNewArrival === true,
+    });
     books.push(book);
     writeBooks(books);
     sendJson(response, 201, book);

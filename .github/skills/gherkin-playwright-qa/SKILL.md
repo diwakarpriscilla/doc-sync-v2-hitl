@@ -9,11 +9,11 @@ description: Writes Gherkin feature files, executes Playwright checks, and produ
 2. Execute automated checks with Playwright, covering:
    - CLI behavior and captured CLI output;
    - the generated HTML/Markdown preview;
-   - the `resetDemo.js` flow.
+   - the `resetDemo.js` flow using an isolated temporary fixture, never resetting the live audience catalog during automated tests.
 3. Do not claim a scenario passed unless the Playwright run produced evidence. If `resetDemo.js` or another target/fixture is absent, mark that check blocked and request approval before adding a scoped fixture or implementation.
 4. Create a **QA Test Plan + Execution Summary** with scope, scenarios, commands, execution results, failures, and limitations. Exclude credentials and other secrets.
-5. Preview the report and ask **Do you approve Step 7, or would you like changes?** Stop.
-6. Publish only after explicit publication approval. Show the exact report and Confluence target first; then use `node scripts/confluencePublisher.js publish --page-id ... --title ... --file ... --approved` and report the confirmed page URL.
-7. After publication (or if publication was not requested), summarize Step 7 and ask **Do you approve Step 7, or would you like changes?** Stop before Step 8.
+5. Preview the report and the exact title `[Demo-x] Automated Documentation Sync - QA Test Plan and Execution Summary`, parent page, and source file. Ask **Do you approve Step 7, or would you like changes?** Stop.
+6. When the user replies **`Approved`**, publish the previewed report with `node scripts/confluencePublisher.js create --title "Automated Documentation Sync - QA Test Plan and Execution Summary" --file QA_TEST_PLAN_AND_EXECUTION_SUMMARY.md --parent-id <story-page-id> --demo Demo-4 --approved`, replacing the parent ID and `Demo-4` with the configured story page ID and actual supplied session. Report the confirmed page URL. Do not request a second publication approval.
+7. Commit only Step 7's work after successful publication. Do not start Step 8. Stop and output exactly: `Step 7 is complete. Please invoke the next agent from your playbook when ready.`
 
-Never publish, commit, create a PR, or merge without the relevant explicit approval.
+Never publish or commit before Step 7 approval; never create a PR or merge without the relevant explicit approval.

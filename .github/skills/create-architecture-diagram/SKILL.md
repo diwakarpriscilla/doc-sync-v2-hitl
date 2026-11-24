@@ -11,8 +11,8 @@ description: Creates, previews, and approval-gates architecture.md with Mermaid 
    - a Mermaid data-flow diagram showing actors, boundaries, and relevant data movement;
    - concise design decisions and failure handling.
 3. Check Mermaid syntax, label the user/actor role **Bookstore Storefront Manager**, and render/preview both diagrams locally as SVG using `@mermaid-js/mermaid-cli`. If rendering fails, report the error and do not claim a visual preview.
-4. Summarize the file and visual preview, then ask **Do you approve Step 2, or would you like changes?** Stop until approved.
-5. Publish the approved architecture page to Confluence only after separate explicit publication approval. Show the destination and content before publishing, use `node scripts/confluencePublisher.js publish --page-id ... --title ... --file architecture.md --approved`; the publisher uploads Mermaid SVGs as page attachments and embeds them in the page. Report the confirmed page URL and attachment names.
-6. After publication, summarize Step 2 and ask **Do you approve Step 2, or would you like changes?** Stop before Step 3.
+4. Preview the exact title `[Demo-x] Automated Documentation Sync - Architecture`, parent page, source file, and visual attachments. Summarize the file and preview, then ask **Do you approve Step 2, or would you like changes?** Stop until approved.
+5. When the user replies **`Approved`**, publish the previewed page with `node scripts/confluencePublisher.js create --title "Automated Documentation Sync - Architecture" --file architecture.md --parent-id <story-page-id> --demo Demo-4 --approved`, replacing the parent ID and `Demo-4` with the configured story page ID and actual supplied session. The publisher renders Mermaid SVGs, attaches them to the new page, and embeds them in storage-format XHTML. Report the confirmed page URL and attachment names. Do not request a second publication approval.
+6. Commit only Step 2's work after successful publication. Do not start Step 3. Stop and output exactly: `Step 2 is complete. Please invoke the next agent from your playbook when ready.`
 
-Never publish, commit, create a PR, or merge without the relevant explicit approval.
+Never publish or commit before Step 2 approval; never create a PR or merge without the relevant explicit approval.

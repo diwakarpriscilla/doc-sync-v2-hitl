@@ -1,6 +1,11 @@
 # Bookstore Web App
 
-A dependency-light bookstore web app that runs at http://localhost:3000.
+**Version 1.0 - Baseline**
+
+A dependency-light bookstore web app that starts with three books and runs at http://localhost:3000.
+
+The Playwright demo adds *The Pragmatic Programmer* as a featured new arrival.
+The new book remains in the catalog until you manually run `node resetDemo.js`.
 
 ## Run
 
@@ -15,4 +20,4 @@ npm start
 node resetDemo.js
 ```
 
-This restores the three starter books and the bookstore README.
+This restores only the three starter books. Documentation files are preserved.

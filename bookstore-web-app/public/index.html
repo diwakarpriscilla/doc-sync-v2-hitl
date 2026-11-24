@@ -17,6 +17,7 @@
 
     <main>
       <section class="hero">
+        <p class="baseline-banner">Version 1.0 - Baseline</p>
         <p class="eyebrow">Curated reads</p>
         <h1>Find your next favorite book.</h1>
         <p>Browse our hand-picked collection of stories, ideas, and adventures.</p>
@@ -39,6 +40,10 @@
           <label>
             <span>Category</span>
             <input name="category" type="text" maxlength="80" required>
+          </label>
+          <label class="featured-toggle">
+            <input name="isNewArrival" type="checkbox">
+            <span>Featured / New Arrival</span>
           </label>
           <button type="submit">Add book</button>
         </form>

@@ -31,6 +31,7 @@ function renderBooks(filteredBooks) {
             <strong>${escapeHtml(book.title)}</strong>
           </div>
           <div class="book-details">
+            ${book.isNewArrival ? '<span class="book-badge">Featured / New Arrival</span>' : ""}
             <h3>${escapeHtml(book.title)}</h3>
             <p>by ${escapeHtml(book.author)} · ${escapeHtml(book.category)}</p>
           </div>
@@ -72,6 +73,7 @@ addBookForm.addEventListener("submit", async (event) => {
   const book = Object.fromEntries(
     ["title", "author", "category"].map((field) => [field, formData.get(field).trim()]),
   );
+  book.isNewArrival = formData.get("isNewArrival") === "on";
 
   try {
     const response = await fetch("/api/books", {
